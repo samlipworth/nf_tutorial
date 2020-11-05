@@ -10,15 +10,31 @@ if (params.help) {
     exit 0
 }
 
+Channel
+     .fromPath(params.query)
+     .splitFasta(by: 1, file:true)
+     .into { queryFile_ch }
+
+
+
+
 process runBlast {
+
+  input:
+  path(queryFile) from queryFile_ch
+
+  output:
+  path(params.outFileName) into blast_output_ch
 
 
   script:
   """
-  blastn  -num_threads $params.threads -db $params.dbDir/$params.dbName -query $params.query -outfmt $params.outfmt $params.options -out $params.outFileName
+  $params.app -num_threads $params.threads -db $params.dbDir/$params.dbName -query $queryFile -outfmt $params.outfmt $params.options -out $params.outFileName
   """
-
 }
+
+blast_output_ch
+  .collectFile(name: 'blast_output_combined.txt',storeDir: params.outdir)
 
 def helpMessage() {
   log.info """
